@@ -30,6 +30,14 @@ export const queryKeys = {
     all: () => ['maintenance'] as const,
     list: (params?: ListParams) => ['maintenance', 'list', params ?? {}] as const,
   },
+  fuelLogs: {
+    all: () => ['fuelLogs'] as const,
+    list: (params?: ListParams) => ['fuelLogs', 'list', params ?? {}] as const,
+  },
+  expenses: {
+    all: () => ['expenses'] as const,
+    list: (params?: ListParams) => ['expenses', 'list', params ?? {}] as const,
+  },
   tracking: {
     liveVehicles: () => ['tracking', 'live'] as const,
     route: (vehicleId: string) => ['tracking', 'route', vehicleId] as const,
