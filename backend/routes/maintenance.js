@@ -6,8 +6,7 @@ const {
   getRecords,
   getRecordById,
   createRecord,
-  updateRecordStatus,
-  updateRecord,
+  closeRecord,
   deleteRecord,
 } = require('../controllers/maintenanceController');
 
@@ -23,37 +22,22 @@ router.post(
   '/',
   authorize('admin', 'manager'),
   [
-    body('vehicle_id').isInt().withMessage('vehicle_id is required'),
-    body('type').isIn(['service', 'repair', 'inspection']).withMessage('type must be service, repair, or inspection'),
-    body('service_date').isISO8601().withMessage('service_date must be a valid date'),
-    body('next_due_date').optional().isISO8601(),
-    body('cost').optional().isFloat({ min: 0 }),
-    body('odometer_reading').optional().isFloat({ min: 0 }),
-    body('status').optional().isIn(['scheduled', 'in_progress', 'completed']),
+    body('vehicleId').isInt().withMessage('vehicleId must be an integer'),
+    body('description').trim().notEmpty().withMessage('Description is required'),
+    body('cost').isFloat({ min: 0 }).withMessage('Cost must be non-negative'),
+    body('scheduledDate').isISO8601().withMessage('scheduledDate must be a valid date'),
+    body('notes').optional().trim(),
   ],
   validate,
   createRecord
 );
 
-router.put(
-  '/:id',
+router.post(
+  '/:id/close',
   authorize('admin', 'manager'),
-  [
-    param('id').isInt(),
-    body('service_date').optional().isISO8601(),
-    body('next_due_date').optional().isISO8601(),
-    body('cost').optional().isFloat({ min: 0 }),
-  ],
+  [param('id').isInt()],
   validate,
-  updateRecord
-);
-
-router.patch(
-  '/:id/status',
-  authorize('admin', 'manager'),
-  [param('id').isInt(), body('status').isIn(['scheduled', 'in_progress', 'completed']).withMessage('Invalid status')],
-  validate,
-  updateRecordStatus
+  closeRecord
 );
 
 router.delete('/:id', authorize('admin'), [param('id').isInt()], validate, deleteRecord);

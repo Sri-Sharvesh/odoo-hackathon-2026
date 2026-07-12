@@ -22,24 +22,29 @@ router.post(
   '/',
   authorize('admin', 'manager'),
   [
-    body('registration_no').trim().notEmpty().withMessage('Registration number is required'),
+    body('registrationNumber').trim().notEmpty().withMessage('Registration number is required'),
+    body('model').trim().notEmpty().withMessage('Model is required'),
     body('type').trim().notEmpty().withMessage('Vehicle type is required'),
-    body('year').optional().isInt({ min: 1950, max: 2100 }),
-    body('capacity').optional().isInt({ min: 0 }),
-    body('status').optional().isIn(['active', 'maintenance', 'inactive']),
+    body('maxLoadCapacityKg').isInt({ min: 0 }).withMessage('maxLoadCapacityKg is required'),
+    body('odometerKm').optional().isFloat({ min: 0 }),
+    body('acquisitionCost').optional().isFloat({ min: 0 }),
   ],
   validate,
   createVehicle
 );
 
-router.put(
+router.patch(
   '/:id',
   authorize('admin', 'manager'),
   [
     param('id').isInt(),
-    body('status').optional().isIn(['active', 'maintenance', 'inactive']),
-    body('year').optional().isInt({ min: 1950, max: 2100 }),
-    body('capacity').optional().isInt({ min: 0 }),
+    body('registrationNumber').optional().trim().notEmpty(),
+    body('model').optional().trim().notEmpty(),
+    body('type').optional().trim().notEmpty(),
+    body('maxLoadCapacityKg').optional().isInt({ min: 0 }),
+    body('odometerKm').optional().isFloat({ min: 0 }),
+    body('acquisitionCost').optional().isFloat({ min: 0 }),
+    body('status').optional().isString(),
   ],
   validate,
   updateVehicle

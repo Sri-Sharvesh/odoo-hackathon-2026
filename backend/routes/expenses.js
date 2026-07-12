@@ -3,33 +3,33 @@ const { body, param } = require('express-validator');
 const validate = require('../middleware/validate');
 const { authenticate, authorize } = require('../middleware/auth');
 const {
-  getLogs,
-  getLogById,
-  createLog,
-  updateLog,
-  deleteLog,
-} = require('../controllers/fuelController');
+  getExpenses,
+  getExpenseById,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+} = require('../controllers/expenseController');
 
 const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/', getLogs);
+router.get('/', getExpenses);
 
-router.get('/:id', [param('id').isInt()], validate, getLogById);
+router.get('/:id', [param('id').isInt()], validate, getExpenseById);
 
 router.post(
   '/',
   authorize('admin', 'manager', 'dispatcher'),
   [
     body('vehicleId').isInt().withMessage('vehicleId must be an integer'),
-    body('liters').isFloat({ min: 0 }).withMessage('Liters must be positive'),
-    body('cost').isFloat({ min: 0 }).withMessage('Cost must be positive'),
+    body('category').trim().notEmpty().withMessage('Category is required'),
+    body('amount').isFloat({ min: 0 }).withMessage('Amount must be positive'),
     body('date').isISO8601().withMessage('Date must be a valid date'),
-    body('notes').optional().trim(),
+    body('description').optional().trim(),
   ],
   validate,
-  createLog
+  createExpense
 );
 
 router.patch(
@@ -38,15 +38,15 @@ router.patch(
   [
     param('id').isInt(),
     body('vehicleId').optional().isInt(),
-    body('liters').optional().isFloat({ min: 0 }),
-    body('cost').optional().isFloat({ min: 0 }),
+    body('category').optional().trim().notEmpty(),
+    body('amount').optional().isFloat({ min: 0 }),
     body('date').optional().isISO8601(),
-    body('notes').optional().trim(),
+    body('description').optional().trim(),
   ],
   validate,
-  updateLog
+  updateExpense
 );
 
-router.delete('/:id', authorize('admin', 'manager'), [param('id').isInt()], validate, deleteLog);
+router.delete('/:id', authorize('admin', 'manager'), [param('id').isInt()], validate, deleteExpense);
 
 module.exports = router;

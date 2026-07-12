@@ -12,6 +12,9 @@ const tripRoutes = require('./routes/trips');
 const maintenanceRoutes = require('./routes/maintenance');
 const fuelRoutes = require('./routes/fuel');
 const analyticsRoutes = require('./routes/analytics');
+const expenseRoutes = require('./routes/expenses');
+const dashboardRoutes = require('./routes/dashboard');
+const reportsRoutes = require('./routes/reports');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -48,6 +51,9 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/fuel-logs', fuelRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // ---------- Error handling (must be last) ----------
 app.use(notFound);

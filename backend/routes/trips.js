@@ -6,8 +6,9 @@ const {
   getTrips,
   getTripById,
   createTrip,
-  updateTripStatus,
-  updateTrip,
+  dispatchTrip,
+  completeTrip,
+  cancelTrip,
   deleteTrip,
 } = require('../controllers/tripController');
 
@@ -23,40 +24,43 @@ router.post(
   '/',
   authorize('admin', 'manager', 'dispatcher'),
   [
-    body('vehicle_id').isInt().withMessage('vehicle_id is required'),
-    body('driver_id').isInt().withMessage('driver_id is required'),
-    body('origin').trim().notEmpty().withMessage('Origin is required'),
+    body('vehicleId').isInt().withMessage('vehicleId must be an integer'),
+    body('driverId').isInt().withMessage('driverId must be an integer'),
+    body('source').trim().notEmpty().withMessage('Source is required'),
     body('destination').trim().notEmpty().withMessage('Destination is required'),
-    body('scheduled_start').isISO8601().withMessage('scheduled_start must be a valid date/time'),
-    body('scheduled_end').optional().isISO8601(),
-    body('distance_km').optional().isFloat({ min: 0 }),
+    body('cargoWeightKg').isFloat({ min: 0 }).withMessage('cargoWeightKg must be non-negative'),
+    body('plannedDistanceKm').isFloat({ min: 0 }).withMessage('plannedDistanceKm must be non-negative'),
   ],
   validate,
   createTrip
 );
 
-router.put(
-  '/:id',
+router.post(
+  '/:id/dispatch',
   authorize('admin', 'manager', 'dispatcher'),
-  [
-    param('id').isInt(),
-    body('scheduled_start').optional().isISO8601(),
-    body('scheduled_end').optional().isISO8601(),
-    body('distance_km').optional().isFloat({ min: 0 }),
-  ],
+  [param('id').isInt()],
   validate,
-  updateTrip
+  dispatchTrip
 );
 
-router.patch(
-  '/:id/status',
+router.post(
+  '/:id/complete',
   authorize('admin', 'manager', 'dispatcher'),
   [
     param('id').isInt(),
-    body('status').isIn(['in_progress', 'completed', 'cancelled']).withMessage('Invalid status'),
+    body('finalOdometerKm').isFloat({ min: 0 }).withMessage('finalOdometerKm must be non-negative'),
+    body('fuelConsumedLiters').isFloat({ min: 0 }).withMessage('fuelConsumedLiters must be non-negative'),
   ],
   validate,
-  updateTripStatus
+  completeTrip
+);
+
+router.post(
+  '/:id/cancel',
+  authorize('admin', 'manager', 'dispatcher'),
+  [param('id').isInt()],
+  validate,
+  cancelTrip
 );
 
 router.delete('/:id', authorize('admin', 'manager'), [param('id').isInt()], validate, deleteTrip);

@@ -2,114 +2,144 @@ const db = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const REC_SELECT = `
-  SELECT m.*, v.registration_no AS vehicle_registration
-  FROM maintenance_records m
-  JOIN vehicles v ON v.id = m.vehicle_id
-`;
-
+// GET /api/maintenance
 const getRecords = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { vehicle_id, status, type } = req.query;
+  const orgId = req.user.orgId;
+  const { vehicleId, status } = req.query;
   const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+  const limit = Math.min(Math.max(parseInt(req.query.pageSize) || 20, 1), 100);
   const offset = (page - 1) * limit;
 
-  let where = 'WHERE m.org_id = ?';
+  let where = 'WHERE orgId = ?';
   const params = [orgId];
-  if (vehicle_id) { where += ' AND m.vehicle_id = ?'; params.push(vehicle_id); }
-  if (status) { where += ' AND m.status = ?'; params.push(status); }
-  if (type) { where += ' AND m.type = ?'; params.push(type); }
 
-  const total = db.prepare(`SELECT COUNT(*) AS count FROM maintenance_records m ${where}`).get(...params).count;
+  if (vehicleId) {
+    where += ' AND vehicleId = ?';
+    params.push(vehicleId);
+  }
+  if (status) {
+    where += ' AND status = ?';
+    params.push(status);
+  }
+
+  const total = db.prepare(`SELECT COUNT(*) AS count FROM maintenance_records ${where}`).get(...params).count;
   const rows = db
-    .prepare(`${REC_SELECT} ${where} ORDER BY m.service_date DESC LIMIT ? OFFSET ?`)
+    .prepare(`SELECT * FROM maintenance_records ${where} ORDER BY scheduledDate DESC LIMIT ? OFFSET ?`)
     .all(...params, limit, offset);
 
-  res.json({ success: true, data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  const mappedRows = rows.map((r) => ({
+    id: String(r.id),
+    vehicleId: String(r.vehicleId),
+    description: r.description,
+    cost: Number(r.cost || 0),
+    scheduledDate: r.scheduledDate,
+    status: r.status,
+    notes: r.notes || '',
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt
+  }));
+
+  res.json({
+    data: mappedRows,
+    meta: { page, pageSize: limit, total, totalPages: Math.ceil(total / limit) },
+  });
 });
 
+// GET /api/maintenance/:id
 const getRecordById = asyncHandler(async (req, res) => {
-  const record = db.prepare(`${REC_SELECT} WHERE m.id = ? AND m.org_id = ?`).get(req.params.id, req.user.org_id);
+  const record = db.prepare(`SELECT * FROM maintenance_records WHERE id = ? AND orgId = ?`).get(req.params.id, req.user.orgId);
   if (!record) throw new ApiError(404, 'Maintenance record not found');
-  res.json({ success: true, data: record });
+
+  res.json({
+    id: String(record.id),
+    vehicleId: String(record.vehicleId),
+    description: record.description,
+    cost: Number(record.cost || 0),
+    scheduledDate: record.scheduledDate,
+    status: record.status,
+    notes: record.notes || '',
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
+  });
 });
 
-// POST /api/maintenance -- also flips vehicle to 'maintenance' status when work begins
+// POST /api/maintenance
 const createRecord = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { vehicle_id, type, description, cost, service_date, next_due_date, odometer_reading, status } = req.body;
+  const orgId = req.user.orgId;
+  const { vehicleId, description, cost, scheduledDate, notes } = req.body;
 
-  const vehicle = db.prepare('SELECT * FROM vehicles WHERE id = ? AND org_id = ?').get(vehicle_id, orgId);
+  const vehicle = db.prepare('SELECT * FROM vehicles WHERE id = ? AND orgId = ?').get(vehicleId, orgId);
   if (!vehicle) throw new ApiError(404, 'Vehicle not found');
 
-  const recordStatus = status || 'completed';
+  if (vehicle.status !== 'available') {
+    const err = new ApiError(409, 'Vehicle is not available for maintenance');
+    err.errors = { vehicleId: 'This vehicle is not available for maintenance.' };
+    throw err;
+  }
 
-  const create = db.transaction(() => {
-    const result = db
+  const result = db.transaction(() => {
+    const insertResult = db
       .prepare(
-        `INSERT INTO maintenance_records (org_id, vehicle_id, type, description, cost, service_date, next_due_date, odometer_reading, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO maintenance_records (orgId, vehicleId, description, cost, scheduledDate, notes, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'open')`
       )
-      .run(orgId, vehicle_id, type, description || null, cost || 0, service_date, next_due_date || null, odometer_reading || null, recordStatus);
+      .run(orgId, vehicleId, description, cost || 0, scheduledDate, notes || null);
 
-    if (recordStatus === 'in_progress' || recordStatus === 'scheduled') {
-      db.prepare(`UPDATE vehicles SET status = 'maintenance', updated_at = datetime('now') WHERE id = ?`).run(vehicle_id);
-    }
-    if (odometer_reading) {
-      db.prepare(`UPDATE vehicles SET odometer = MAX(odometer, ?), updated_at = datetime('now') WHERE id = ?`).run(odometer_reading, vehicle_id);
-    }
-    return result.lastInsertRowid;
+    db.prepare("UPDATE vehicles SET status = 'in_shop', updatedAt = datetime('now') WHERE id = ?").run(vehicleId);
+    return insertResult.lastInsertRowid;
+  })();
+
+  const record = db.prepare(`SELECT * FROM maintenance_records WHERE id = ?`).get(result);
+
+  res.status(201).json({
+    id: String(record.id),
+    vehicleId: String(record.vehicleId),
+    description: record.description,
+    cost: Number(record.cost || 0),
+    scheduledDate: record.scheduledDate,
+    status: record.status,
+    notes: record.notes || '',
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
   });
-
-  const id = create();
-  const record = db.prepare(`${REC_SELECT} WHERE m.id = ?`).get(id);
-  res.status(201).json({ success: true, data: record });
 });
 
-// PATCH /api/maintenance/:id/status -- e.g. mark completed, which returns vehicle to active
-const updateRecordStatus = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { status } = req.body;
-  const record = db.prepare('SELECT * FROM maintenance_records WHERE id = ? AND org_id = ?').get(req.params.id, orgId);
+// POST /api/maintenance/:id/close
+const closeRecord = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
+  const record = db.prepare('SELECT * FROM maintenance_records WHERE id = ? AND orgId = ?').get(req.params.id, orgId);
   if (!record) throw new ApiError(404, 'Maintenance record not found');
 
-  const apply = db.transaction(() => {
-    db.prepare('UPDATE maintenance_records SET status = ? WHERE id = ?').run(status, record.id);
-    if (status === 'completed') {
-      db.prepare(`UPDATE vehicles SET status = 'active', updated_at = datetime('now') WHERE id = ?`).run(record.vehicle_id);
-    } else if (status === 'in_progress' || status === 'scheduled') {
-      db.prepare(`UPDATE vehicles SET status = 'maintenance', updated_at = datetime('now') WHERE id = ?`).run(record.vehicle_id);
-    }
+  if (record.status !== 'open') {
+    throw new ApiError(409, 'Only open records can be closed');
+  }
+
+  db.transaction(() => {
+    db.prepare("UPDATE maintenance_records SET status = 'closed', updatedAt = datetime('now') WHERE id = ?").run(record.id);
+    db.prepare("UPDATE vehicles SET status = 'available', updatedAt = datetime('now') WHERE id = ?").run(record.vehicleId);
+  })();
+
+  const updated = db.prepare('SELECT * FROM maintenance_records WHERE id = ?').get(record.id);
+
+  res.json({
+    id: String(updated.id),
+    vehicleId: String(updated.vehicleId),
+    description: updated.description,
+    cost: Number(updated.cost || 0),
+    scheduledDate: updated.scheduledDate,
+    status: updated.status,
+    notes: updated.notes || '',
+    createdAt: updated.createdAt,
+    updatedAt: updated.updatedAt
   });
-  apply();
-
-  const updated = db.prepare(`${REC_SELECT} WHERE m.id = ?`).get(record.id);
-  res.json({ success: true, data: updated });
 });
 
-const updateRecord = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const record = db.prepare('SELECT * FROM maintenance_records WHERE id = ? AND org_id = ?').get(req.params.id, orgId);
-  if (!record) throw new ApiError(404, 'Maintenance record not found');
-
-  const fields = ['type', 'description', 'cost', 'service_date', 'next_due_date', 'odometer_reading'];
-  const updates = {};
-  fields.forEach((f) => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
-  if (Object.keys(updates).length === 0) throw new ApiError(400, 'No valid fields provided to update');
-
-  const setClause = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
-  db.prepare(`UPDATE maintenance_records SET ${setClause} WHERE id = ?`).run(...Object.values(updates), record.id);
-
-  const updated = db.prepare(`${REC_SELECT} WHERE m.id = ?`).get(record.id);
-  res.json({ success: true, data: updated });
-});
-
+// DELETE /api/maintenance/:id
 const deleteRecord = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const result = db.prepare('DELETE FROM maintenance_records WHERE id = ? AND org_id = ?').run(req.params.id, orgId);
+  const orgId = req.user.orgId;
+  const result = db.prepare('DELETE FROM maintenance_records WHERE id = ? AND orgId = ?').run(req.params.id, orgId);
   if (result.changes === 0) throw new ApiError(404, 'Maintenance record not found');
-  res.json({ success: true, message: 'Maintenance record deleted successfully' });
+  res.status(200).json({ success: true });
 });
 
-module.exports = { getRecords, getRecordById, createRecord, updateRecordStatus, updateRecord, deleteRecord };
+module.exports = { getRecords, getRecordById, createRecord, closeRecord, deleteRecord };

@@ -2,94 +2,130 @@ const db = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const LOG_SELECT = `
-  SELECT f.*, v.registration_no AS vehicle_registration, dr.name AS driver_name
-  FROM fuel_logs f
-  JOIN vehicles v ON v.id = f.vehicle_id
-  LEFT JOIN drivers dr ON dr.id = f.driver_id
-`;
-
+// GET /api/fuel-logs
 const getLogs = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { vehicle_id, driver_id, from, to } = req.query;
+  const orgId = req.user.orgId;
+  const { vehicleId } = req.query;
   const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+  const limit = Math.min(Math.max(parseInt(req.query.pageSize) || 20, 1), 100);
   const offset = (page - 1) * limit;
 
-  let where = 'WHERE f.org_id = ?';
+  let where = 'WHERE orgId = ?';
   const params = [orgId];
-  if (vehicle_id) { where += ' AND f.vehicle_id = ?'; params.push(vehicle_id); }
-  if (driver_id) { where += ' AND f.driver_id = ?'; params.push(driver_id); }
-  if (from) { where += ' AND f.log_date >= ?'; params.push(from); }
-  if (to) { where += ' AND f.log_date <= ?'; params.push(to); }
-
-  const total = db.prepare(`SELECT COUNT(*) AS count FROM fuel_logs f ${where}`).get(...params).count;
-  const rows = db
-    .prepare(`${LOG_SELECT} ${where} ORDER BY f.log_date DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset);
-
-  res.json({ success: true, data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
-});
-
-const getLogById = asyncHandler(async (req, res) => {
-  const log = db.prepare(`${LOG_SELECT} WHERE f.id = ? AND f.org_id = ?`).get(req.params.id, req.user.org_id);
-  if (!log) throw new ApiError(404, 'Fuel log not found');
-  res.json({ success: true, data: log });
-});
-
-const createLog = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { vehicle_id, driver_id, log_date, liters, cost, odometer_reading, fuel_station } = req.body;
-
-  const vehicle = db.prepare('SELECT * FROM vehicles WHERE id = ? AND org_id = ?').get(vehicle_id, orgId);
-  if (!vehicle) throw new ApiError(404, 'Vehicle not found');
-
-  if (driver_id) {
-    const driver = db.prepare('SELECT * FROM drivers WHERE id = ? AND org_id = ?').get(driver_id, orgId);
-    if (!driver) throw new ApiError(404, 'Driver not found');
+  if (vehicleId) {
+    where += ' AND vehicleId = ?';
+    params.push(vehicleId);
   }
 
-  const create = db.transaction(() => {
-    const result = db
-      .prepare(
-        `INSERT INTO fuel_logs (org_id, vehicle_id, driver_id, log_date, liters, cost, odometer_reading, fuel_station)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(orgId, vehicle_id, driver_id || null, log_date, liters, cost, odometer_reading || null, fuel_station || null);
+  const total = db.prepare(`SELECT COUNT(*) AS count FROM fuel_logs ${where}`).get(...params).count;
+  const rows = db
+    .prepare(`SELECT * FROM fuel_logs ${where} ORDER BY date DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset);
 
-    if (odometer_reading) {
-      db.prepare(`UPDATE vehicles SET odometer = MAX(odometer, ?), updated_at = datetime('now') WHERE id = ?`).run(odometer_reading, vehicle_id);
-    }
-    return result.lastInsertRowid;
+  const mappedRows = rows.map((r) => ({
+    id: String(r.id),
+    vehicleId: String(r.vehicleId),
+    liters: Number(r.liters),
+    cost: Number(r.cost),
+    date: r.date,
+    notes: r.notes || '',
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt
+  }));
+
+  res.json({
+    data: mappedRows,
+    meta: { page, pageSize: limit, total, totalPages: Math.ceil(total / limit) },
   });
-
-  const id = create();
-  const log = db.prepare(`${LOG_SELECT} WHERE f.id = ?`).get(id);
-  res.status(201).json({ success: true, data: log });
 });
 
-const updateLog = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const log = db.prepare('SELECT * FROM fuel_logs WHERE id = ? AND org_id = ?').get(req.params.id, orgId);
+// GET /api/fuel-logs/:id
+const getLogById = asyncHandler(async (req, res) => {
+  const log = db.prepare('SELECT * FROM fuel_logs WHERE id = ? AND orgId = ?').get(req.params.id, req.user.orgId);
   if (!log) throw new ApiError(404, 'Fuel log not found');
 
-  const fields = ['log_date', 'liters', 'cost', 'odometer_reading', 'fuel_station'];
+  res.json({
+    id: String(log.id),
+    vehicleId: String(log.vehicleId),
+    liters: Number(log.liters),
+    cost: Number(log.cost),
+    date: log.date,
+    notes: log.notes || '',
+    createdAt: log.createdAt,
+    updatedAt: log.updatedAt
+  });
+});
+
+// POST /api/fuel-logs
+const createLog = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
+  const { vehicleId, liters, cost, date, notes } = req.body;
+
+  const vehicle = db.prepare('SELECT * FROM vehicles WHERE id = ? AND orgId = ?').get(vehicleId, orgId);
+  if (!vehicle) throw new ApiError(404, 'Vehicle not found');
+
+  const result = db
+    .prepare(
+      `INSERT INTO fuel_logs (orgId, vehicleId, liters, cost, date, notes)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(orgId, vehicleId, liters, cost, date, notes || null);
+
+  const log = db.prepare('SELECT * FROM fuel_logs WHERE id = ?').get(result.lastInsertRowid);
+
+  res.status(201).json({
+    id: String(log.id),
+    vehicleId: String(log.vehicleId),
+    liters: Number(log.liters),
+    cost: Number(log.cost),
+    date: log.date,
+    notes: log.notes || '',
+    createdAt: log.createdAt,
+    updatedAt: log.updatedAt
+  });
+});
+
+// PATCH /api/fuel-logs/:id
+const updateLog = asyncHandler(async (req, res) => {
+  const orgId = req.user.orgId;
+  const log = db.prepare('SELECT * FROM fuel_logs WHERE id = ? AND orgId = ?').get(req.params.id, orgId);
+  if (!log) throw new ApiError(404, 'Fuel log not found');
+
+  const { vehicleId, liters, cost, date, notes } = req.body;
+  const fields = { vehicleId, liters, cost, date, notes };
   const updates = {};
-  fields.forEach((f) => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+  Object.keys(fields).forEach((f) => {
+    if (fields[f] !== undefined) updates[f] = fields[f];
+  });
+
   if (Object.keys(updates).length === 0) throw new ApiError(400, 'No valid fields provided to update');
 
   const setClause = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
-  db.prepare(`UPDATE fuel_logs SET ${setClause} WHERE id = ?`).run(...Object.values(updates), log.id);
+  const values = Object.values(updates);
 
-  const updated = db.prepare(`${LOG_SELECT} WHERE f.id = ?`).get(log.id);
-  res.json({ success: true, data: updated });
+  db.prepare(`UPDATE fuel_logs SET ${setClause}, updatedAt = datetime('now') WHERE id = ? AND orgId = ?`)
+    .run(...values, req.params.id, orgId);
+
+  const updated = db.prepare('SELECT * FROM fuel_logs WHERE id = ?').get(req.params.id);
+
+  res.json({
+    id: String(updated.id),
+    vehicleId: String(updated.vehicleId),
+    liters: Number(updated.liters),
+    cost: Number(updated.cost),
+    date: updated.date,
+    notes: updated.notes || '',
+    createdAt: updated.createdAt,
+    updatedAt: updated.updatedAt
+  });
 });
 
+// DELETE /api/fuel-logs/:id
 const deleteLog = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const result = db.prepare('DELETE FROM fuel_logs WHERE id = ? AND org_id = ?').run(req.params.id, orgId);
+  const orgId = req.user.orgId;
+  const result = db.prepare('DELETE FROM fuel_logs WHERE id = ? AND orgId = ?').run(req.params.id, orgId);
   if (result.changes === 0) throw new ApiError(404, 'Fuel log not found');
-  res.json({ success: true, message: 'Fuel log deleted successfully' });
+  res.status(200).json({ success: true });
 });
 
 module.exports = { getLogs, getLogById, createLog, updateLog, deleteLog };

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
@@ -8,6 +7,7 @@ const {
   registerUser,
   login,
   me,
+  logout,
 } = require('../controllers/authController');
 
 const router = express.Router();
@@ -32,7 +32,7 @@ router.post(
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('A valid email is required').normalizeEmail(),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('role').optional().isIn(['admin', 'manager', 'dispatcher']).withMessage('Invalid role'),
+    body('role').optional().isString().withMessage('Invalid role'),
   ],
   validate,
   registerUser
@@ -47,6 +47,8 @@ router.post(
   validate,
   login
 );
+
+router.post('/logout', logout);
 
 router.get('/me', authenticate, me);
 

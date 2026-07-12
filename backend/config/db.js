@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 const DB_DIR = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
@@ -16,112 +17,139 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS organizations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
+  createdAt TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  org_id INTEGER NOT NULL,
+  orgId INTEGER NOT NULL,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('admin','manager','dispatcher')),
-  created_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  passwordHash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'dispatcher',
+  createdAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS vehicles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  org_id INTEGER NOT NULL,
-  registration_no TEXT NOT NULL,
+  orgId INTEGER NOT NULL,
+  registrationNumber TEXT NOT NULL,
+  model TEXT NOT NULL,
   type TEXT NOT NULL,
-  make TEXT,
-  model TEXT,
-  year INTEGER,
-  capacity INTEGER,
-  odometer REAL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','maintenance','inactive')),
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  UNIQUE(org_id, registration_no)
+  maxLoadCapacityKg INTEGER NOT NULL,
+  odometerKm REAL DEFAULT 0,
+  acquisitionCost REAL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'available',
+  createdAt TEXT DEFAULT (datetime('now')),
+  updatedAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE,
+  UNIQUE(orgId, registrationNumber)
 );
 
 CREATE TABLE IF NOT EXISTS drivers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  org_id INTEGER NOT NULL,
+  orgId INTEGER NOT NULL,
   name TEXT NOT NULL,
-  license_number TEXT NOT NULL,
-  license_expiry TEXT,
-  phone TEXT,
-  email TEXT,
-  status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','on_trip','off_duty')),
-  assigned_vehicle_id INTEGER,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (assigned_vehicle_id) REFERENCES vehicles(id) ON DELETE SET NULL,
-  UNIQUE(org_id, license_number)
+  licenseNumber TEXT NOT NULL,
+  licenseCategory TEXT NOT NULL,
+  licenseExpiry TEXT NOT NULL,
+  contactNumber TEXT,
+  safetyScore REAL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'available',
+  assignedVehicleId INTEGER,
+  createdAt TEXT DEFAULT (datetime('now')),
+  updatedAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (assignedVehicleId) REFERENCES vehicles(id) ON DELETE SET NULL,
+  UNIQUE(orgId, licenseNumber)
 );
 
 CREATE TABLE IF NOT EXISTS trips (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  org_id INTEGER NOT NULL,
-  vehicle_id INTEGER NOT NULL,
-  driver_id INTEGER NOT NULL,
-  origin TEXT NOT NULL,
+  orgId INTEGER NOT NULL,
+  vehicleId INTEGER NOT NULL,
+  driverId INTEGER NOT NULL,
+  source TEXT NOT NULL,
   destination TEXT NOT NULL,
-  scheduled_start TEXT NOT NULL,
-  scheduled_end TEXT,
-  actual_start TEXT,
-  actual_end TEXT,
-  distance_km REAL,
-  status TEXT NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','in_progress','completed','cancelled')),
-  notes TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
-  FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+  cargoWeightKg REAL DEFAULT 0,
+  plannedDistanceKm REAL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'draft',
+  finalOdometerKm REAL,
+  fuelConsumedLiters REAL,
+  createdAt TEXT DEFAULT (datetime('now')),
+  updatedAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE,
+  FOREIGN KEY (driverId) REFERENCES drivers(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS maintenance_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  org_id INTEGER NOT NULL,
-  vehicle_id INTEGER NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('service','repair','inspection')),
-  description TEXT,
+  orgId INTEGER NOT NULL,
+  vehicleId INTEGER NOT NULL,
+  description TEXT NOT NULL,
   cost REAL DEFAULT 0,
-  service_date TEXT NOT NULL,
-  next_due_date TEXT,
-  odometer_reading REAL,
-  status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('scheduled','in_progress','completed')),
-  created_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+  scheduledDate TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  notes TEXT,
+  createdAt TEXT DEFAULT (datetime('now')),
+  updatedAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS fuel_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  org_id INTEGER NOT NULL,
-  vehicle_id INTEGER NOT NULL,
-  driver_id INTEGER,
-  log_date TEXT NOT NULL,
+  orgId INTEGER NOT NULL,
+  vehicleId INTEGER NOT NULL,
   liters REAL NOT NULL,
   cost REAL NOT NULL,
-  odometer_reading REAL,
-  fuel_station TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
-  FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE SET NULL
+  date TEXT NOT NULL,
+  notes TEXT,
+  createdAt TEXT DEFAULT (datetime('now')),
+  updatedAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_vehicles_org ON vehicles(org_id);
-CREATE INDEX IF NOT EXISTS idx_drivers_org ON drivers(org_id);
-CREATE INDEX IF NOT EXISTS idx_trips_org ON trips(org_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_org ON maintenance_records(org_id);
-CREATE INDEX IF NOT EXISTS idx_fuel_org ON fuel_logs(org_id);
+CREATE TABLE IF NOT EXISTS expenses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  orgId INTEGER NOT NULL,
+  vehicleId INTEGER NOT NULL,
+  category TEXT NOT NULL,
+  amount REAL NOT NULL,
+  date TEXT NOT NULL,
+  description TEXT,
+  createdAt TEXT DEFAULT (datetime('now')),
+  updatedAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (orgId) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (vehicleId) REFERENCES vehicles(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicles_org ON vehicles(orgId);
+CREATE INDEX IF NOT EXISTS idx_drivers_org ON drivers(orgId);
+CREATE INDEX IF NOT EXISTS idx_trips_org ON trips(orgId);
+CREATE INDEX IF NOT EXISTS idx_maintenance_org ON maintenance_records(orgId);
+CREATE INDEX IF NOT EXISTS idx_fuel_org ON fuel_logs(orgId);
+CREATE INDEX IF NOT EXISTS idx_expenses_org ON expenses(orgId);
 `);
+
+// ---------- Seed Default Data ----------
+const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
+if (userCount === 0) {
+  db.transaction(() => {
+    const orgResult = db.prepare("INSERT INTO organizations (name) VALUES ('TransitOps Org')").run();
+    const orgId = orgResult.lastInsertRowid;
+    
+    const passwordHash = bcrypt.hashSync('password', 10);
+    db.prepare(`
+      INSERT INTO users (orgId, name, email, passwordHash, role)
+      VALUES (?, 'Alex Morgan', 'manager@transitops.dev', ?, 'fleet_manager')
+    `).run(orgId, passwordHash);
+
+    console.log('Database seeded with default organization and user: manager@transitops.dev / password');
+  })();
+}
 
 module.exports = db;

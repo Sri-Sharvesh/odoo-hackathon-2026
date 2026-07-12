@@ -2,113 +2,169 @@ const db = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 
+// GET /api/drivers
 const getDrivers = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { status, search } = req.query;
+  const orgId = req.user.orgId;
+  const { status, category, search } = req.query;
   const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+  const limit = Math.min(Math.max(parseInt(req.query.pageSize) || 20, 1), 100);
   const offset = (page - 1) * limit;
 
-  let where = 'WHERE d.org_id = ?';
+  let where = 'WHERE orgId = ?';
   const params = [orgId];
 
   if (status) {
-    where += ' AND d.status = ?';
+    where += ' AND status = ?';
     params.push(status);
   }
+  if (category) {
+    where += ' AND licenseCategory = ?';
+    params.push(category);
+  }
   if (search) {
-    where += ' AND (d.name LIKE ? OR d.license_number LIKE ?)';
+    where += ' AND (name LIKE ? OR licenseNumber LIKE ?)';
     const s = `%${search}%`;
     params.push(s, s);
   }
 
-  const total = db.prepare(`SELECT COUNT(*) AS count FROM drivers d ${where}`).get(...params).count;
+  const total = db.prepare(`SELECT COUNT(*) AS count FROM drivers ${where}`).get(...params).count;
   const rows = db
-    .prepare(
-      `SELECT d.*, v.registration_no AS assigned_vehicle_reg
-       FROM drivers d
-       LEFT JOIN vehicles v ON v.id = d.assigned_vehicle_id
-       ${where} ORDER BY d.created_at DESC LIMIT ? OFFSET ?`
-    )
+    .prepare(`SELECT * FROM drivers ${where} ORDER BY createdAt DESC LIMIT ? OFFSET ?`)
     .all(...params, limit, offset);
 
+  const mappedRows = rows.map((r) => ({
+    id: String(r.id),
+    name: r.name,
+    licenseNumber: r.licenseNumber,
+    licenseCategory: r.licenseCategory,
+    licenseExpiry: r.licenseExpiry,
+    contactNumber: r.contactNumber || '',
+    safetyScore: Number(r.safetyScore || 0),
+    status: r.status,
+    assignedVehicleId: r.assignedVehicleId ? String(r.assignedVehicleId) : null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt
+  }));
+
   res.json({
-    success: true,
-    data: rows,
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    data: mappedRows,
+    meta: { page, pageSize: limit, total, totalPages: Math.ceil(total / limit) },
   });
 });
 
+// GET /api/drivers/:id
 const getDriverById = asyncHandler(async (req, res) => {
   const driver = db
-    .prepare('SELECT * FROM drivers WHERE id = ? AND org_id = ?')
-    .get(req.params.id, req.user.org_id);
+    .prepare('SELECT * FROM drivers WHERE id = ? AND orgId = ?')
+    .get(req.params.id, req.user.orgId);
   if (!driver) throw new ApiError(404, 'Driver not found');
-  res.json({ success: true, data: driver });
+
+  res.json({
+    id: String(driver.id),
+    name: driver.name,
+    licenseNumber: driver.licenseNumber,
+    licenseCategory: driver.licenseCategory,
+    licenseExpiry: driver.licenseExpiry,
+    contactNumber: driver.contactNumber || '',
+    safetyScore: Number(driver.safetyScore || 0),
+    status: driver.status,
+    assignedVehicleId: driver.assignedVehicleId ? String(driver.assignedVehicleId) : null,
+    createdAt: driver.createdAt,
+    updatedAt: driver.updatedAt
+  });
 });
 
+// POST /api/drivers
 const createDriver = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { name, license_number, license_expiry, phone, email, status } = req.body;
+  const orgId = req.user.orgId;
+  const { name, licenseNumber, licenseCategory, licenseExpiry, contactNumber, safetyScore } = req.body;
+
+  // Check for duplicate licenseNumber
+  const existing = db.prepare('SELECT id FROM drivers WHERE orgId = ? AND LOWER(licenseNumber) = LOWER(?)').get(orgId, licenseNumber);
+  if (existing) {
+    const err = new ApiError(409, 'License number already exists');
+    err.errors = { licenseNumber: 'This license number is already in use.' };
+    throw err;
+  }
 
   const result = db
     .prepare(
-      `INSERT INTO drivers (org_id, name, license_number, license_expiry, phone, email, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO drivers (orgId, name, licenseNumber, licenseCategory, licenseExpiry, contactNumber, safetyScore, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'available')`
     )
-    .run(orgId, name, license_number, license_expiry || null, phone || null, email || null, status || 'available');
+    .run(orgId, name, licenseNumber, licenseCategory, licenseExpiry, contactNumber || null, safetyScore || 0);
 
   const driver = db.prepare('SELECT * FROM drivers WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ success: true, data: driver });
+  
+  res.status(201).json({
+    id: String(driver.id),
+    name: driver.name,
+    licenseNumber: driver.licenseNumber,
+    licenseCategory: driver.licenseCategory,
+    licenseExpiry: driver.licenseExpiry,
+    contactNumber: driver.contactNumber || '',
+    safetyScore: Number(driver.safetyScore || 0),
+    status: driver.status,
+    assignedVehicleId: driver.assignedVehicleId ? String(driver.assignedVehicleId) : null,
+    createdAt: driver.createdAt,
+    updatedAt: driver.updatedAt
+  });
 });
 
+// PATCH /api/drivers/:id
 const updateDriver = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const existing = db.prepare('SELECT * FROM drivers WHERE id = ? AND org_id = ?').get(req.params.id, orgId);
+  const orgId = req.user.orgId;
+  const existing = db.prepare('SELECT * FROM drivers WHERE id = ? AND orgId = ?').get(req.params.id, orgId);
   if (!existing) throw new ApiError(404, 'Driver not found');
 
-  const fields = ['name', 'license_number', 'license_expiry', 'phone', 'email', 'status'];
+  const { name, licenseNumber, licenseCategory, licenseExpiry, contactNumber, safetyScore, status, assignedVehicleId } = req.body;
+
+  if (licenseNumber && licenseNumber.toLowerCase() !== existing.licenseNumber.toLowerCase()) {
+    const isDuplicate = db.prepare('SELECT id FROM drivers WHERE orgId = ? AND id != ? AND LOWER(licenseNumber) = LOWER(?)').get(orgId, req.params.id, licenseNumber);
+    if (isDuplicate) {
+      const err = new ApiError(409, 'License number already exists');
+      err.errors = { licenseNumber: 'This license number is already in use.' };
+      throw err;
+    }
+  }
+
+  const fields = { name, licenseNumber, licenseCategory, licenseExpiry, contactNumber, safetyScore, status, assignedVehicleId };
   const updates = {};
-  fields.forEach((f) => {
-    if (req.body[f] !== undefined) updates[f] = req.body[f];
+  Object.keys(fields).forEach((f) => {
+    if (fields[f] !== undefined) updates[f] = fields[f];
   });
+
   if (Object.keys(updates).length === 0) throw new ApiError(400, 'No valid fields provided to update');
 
   const setClause = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
   const values = Object.values(updates);
 
-  db.prepare(`UPDATE drivers SET ${setClause}, updated_at = datetime('now') WHERE id = ? AND org_id = ?`)
+  db.prepare(`UPDATE drivers SET ${setClause}, updatedAt = datetime('now') WHERE id = ? AND orgId = ?`)
     .run(...values, req.params.id, orgId);
 
   const driver = db.prepare('SELECT * FROM drivers WHERE id = ?').get(req.params.id);
-  res.json({ success: true, data: driver });
+
+  res.json({
+    id: String(driver.id),
+    name: driver.name,
+    licenseNumber: driver.licenseNumber,
+    licenseCategory: driver.licenseCategory,
+    licenseExpiry: driver.licenseExpiry,
+    contactNumber: driver.contactNumber || '',
+    safetyScore: Number(driver.safetyScore || 0),
+    status: driver.status,
+    assignedVehicleId: driver.assignedVehicleId ? String(driver.assignedVehicleId) : null,
+    createdAt: driver.createdAt,
+    updatedAt: driver.updatedAt
+  });
 });
 
-// PATCH /api/drivers/:id/assign-vehicle  { vehicle_id }
-const assignVehicle = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const { vehicle_id } = req.body;
-
-  const driver = db.prepare('SELECT * FROM drivers WHERE id = ? AND org_id = ?').get(req.params.id, orgId);
-  if (!driver) throw new ApiError(404, 'Driver not found');
-
-  if (vehicle_id !== null && vehicle_id !== undefined) {
-    const vehicle = db.prepare('SELECT * FROM vehicles WHERE id = ? AND org_id = ?').get(vehicle_id, orgId);
-    if (!vehicle) throw new ApiError(404, 'Vehicle not found');
-  }
-
-  db.prepare(`UPDATE drivers SET assigned_vehicle_id = ?, updated_at = datetime('now') WHERE id = ?`)
-    .run(vehicle_id ?? null, req.params.id);
-
-  const updated = db.prepare('SELECT * FROM drivers WHERE id = ?').get(req.params.id);
-  res.json({ success: true, data: updated });
-});
-
+// DELETE /api/drivers/:id
 const deleteDriver = asyncHandler(async (req, res) => {
-  const orgId = req.user.org_id;
-  const result = db.prepare('DELETE FROM drivers WHERE id = ? AND org_id = ?').run(req.params.id, orgId);
+  const orgId = req.user.orgId;
+  const result = db.prepare('DELETE FROM drivers WHERE id = ? AND orgId = ?').run(req.params.id, orgId);
   if (result.changes === 0) throw new ApiError(404, 'Driver not found');
-  res.json({ success: true, message: 'Driver deleted successfully' });
+  res.status(200).json({ success: true });
 });
 
-module.exports = { getDrivers, getDriverById, createDriver, updateDriver, assignVehicle, deleteDriver };
+module.exports = { getDrivers, getDriverById, createDriver, updateDriver, deleteDriver };

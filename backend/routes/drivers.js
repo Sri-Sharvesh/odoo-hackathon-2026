@@ -7,7 +7,6 @@ const {
   getDriverById,
   createDriver,
   updateDriver,
-  assignVehicle,
   deleteDriver,
 } = require('../controllers/driverController');
 
@@ -24,34 +23,32 @@ router.post(
   authorize('admin', 'manager'),
   [
     body('name').trim().notEmpty().withMessage('Name is required'),
-    body('license_number').trim().notEmpty().withMessage('License number is required'),
-    body('license_expiry').optional().isISO8601().withMessage('license_expiry must be a valid date'),
-    body('email').optional().isEmail(),
-    body('status').optional().isIn(['available', 'on_trip', 'off_duty']),
+    body('licenseNumber').trim().notEmpty().withMessage('License number is required'),
+    body('licenseCategory').trim().notEmpty().withMessage('License category is required'),
+    body('licenseExpiry').isISO8601().withMessage('licenseExpiry must be a valid date'),
+    body('contactNumber').optional().trim().notEmpty(),
+    body('safetyScore').optional().isFloat({ min: 0, max: 100 }),
   ],
   validate,
   createDriver
 );
 
-router.put(
+router.patch(
   '/:id',
   authorize('admin', 'manager'),
   [
     param('id').isInt(),
-    body('license_expiry').optional().isISO8601(),
-    body('email').optional().isEmail(),
-    body('status').optional().isIn(['available', 'on_trip', 'off_duty']),
+    body('name').optional().trim().notEmpty(),
+    body('licenseNumber').optional().trim().notEmpty(),
+    body('licenseCategory').optional().trim().notEmpty(),
+    body('licenseExpiry').optional().isISO8601(),
+    body('contactNumber').optional().trim(),
+    body('safetyScore').optional().isFloat({ min: 0, max: 100 }),
+    body('status').optional().isString(),
+    body('assignedVehicleId').optional().custom((val) => val === null || typeof val === 'number' || typeof val === 'string'),
   ],
   validate,
   updateDriver
-);
-
-router.patch(
-  '/:id/assign-vehicle',
-  authorize('admin', 'manager', 'dispatcher'),
-  [param('id').isInt(), body('vehicle_id').optional({ nullable: true }).isInt()],
-  validate,
-  assignVehicle
 );
 
 router.delete('/:id', authorize('admin'), [param('id').isInt()], validate, deleteDriver);
