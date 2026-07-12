@@ -36,6 +36,8 @@ export interface DataTableProps<T> {
   onSortChange?: (sort: SortState) => void
   skeletonRows?: number
   className?: string
+  /** Rendered below the table, inside the same bordered container (e.g. pagination). */
+  footer?: ReactNode
 }
 
 const alignClass: Record<ColumnAlign, string> = {
@@ -59,6 +61,7 @@ export function DataTable<T>({
   onSortChange,
   skeletonRows = 6,
   className,
+  footer,
 }: DataTableProps<T>) {
   const isControlledSort = sort !== undefined && onSortChange !== undefined
   const [internalSort, setInternalSort] = useState<SortState | null>(null)
@@ -197,6 +200,7 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+      {footer}
     </div>
   )
 }
