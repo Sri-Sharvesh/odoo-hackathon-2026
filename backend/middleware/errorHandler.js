@@ -34,9 +34,20 @@ function errorHandler(err, req, res, next) {
     console.error(err);
   }
 
+  let errors = err.errors || null;
+  if (details && Array.isArray(details)) {
+    errors = {};
+    details.forEach((d) => {
+      if (d.field) {
+        errors[d.field] = d.message;
+      }
+    });
+  }
+
   res.status(statusCode).json({
     success: false,
     message,
+    ...(errors ? { errors } : {}),
     ...(details ? { details } : {}),
   });
 }
