@@ -101,7 +101,7 @@ export function DataTable<T>({
     >
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50">
+          <thead className="sticky top-0 z-10 bg-muted">
             <tr className="border-b border-border">
               {columns.map((column) => {
                 const isSorted = activeSort?.field === column.id
@@ -119,7 +119,7 @@ export function DataTable<T>({
                     aria-sort={ariaSort}
                     style={column.width ? { width: column.width } : undefined}
                     className={cn(
-                      'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500',
+                      'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-foreground-muted',
                       alignClass[column.align ?? 'left'],
                       column.headerClassName,
                     )}
@@ -129,7 +129,7 @@ export function DataTable<T>({
                         type="button"
                         onClick={() => handleSort(column)}
                         className={cn(
-                          'inline-flex items-center gap-1 hover:text-slate-800',
+                          'inline-flex items-center gap-1 hover:text-foreground',
                           column.align === 'right' && 'flex-row-reverse',
                           column.align === 'center' && 'mx-auto',
                         )}
@@ -179,14 +179,14 @@ export function DataTable<T>({
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
                     'border-b border-border transition-colors last:border-0',
-                    onRowClick && 'cursor-pointer hover:bg-slate-50',
+                    onRowClick && 'cursor-pointer hover:bg-surface-hover',
                   )}
                 >
                   {columns.map((column) => (
                     <td
                       key={column.id}
                       className={cn(
-                        'px-4 py-3 text-slate-700',
+                        'px-4 py-3 text-foreground',
                         alignClass[column.align ?? 'left'],
                         column.cellClassName,
                       )}
@@ -213,7 +213,7 @@ function SortIcon({
   direction?: SortDirection
 }) {
   if (!active) {
-    return <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+    return <ChevronsUpDown className="h-3.5 w-3.5 text-foreground-subtle" aria-hidden />
   }
   return direction === 'asc' ? (
     <ChevronUp className="h-3.5 w-3.5" aria-hidden />

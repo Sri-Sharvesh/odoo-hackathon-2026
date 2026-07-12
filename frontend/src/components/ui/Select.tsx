@@ -34,7 +34,7 @@ export function Select({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={selectId} className="text-sm font-medium text-foreground">
           {label}
           {required && (
             <span className="ml-0.5 text-danger" aria-hidden>
@@ -50,7 +50,7 @@ export function Select({
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={cn(
-            'h-9 w-full appearance-none rounded-md border border-border bg-surface px-3 pr-8 text-sm text-slate-900 transition-colors',
+            'h-9 w-full appearance-none rounded-md border border-border bg-surface px-3 pr-8 text-sm text-foreground transition-colors',
             'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
             error && 'border-danger focus:border-danger focus:ring-danger/30',
             className,
@@ -65,7 +65,7 @@ export function Select({
           ))}
         </select>
         <ChevronDown
-          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-subtle"
           aria-hidden
         />
       </div>
@@ -74,7 +74,7 @@ export function Select({
           {error}
         </p>
       ) : hint ? (
-        <p id={`${selectId}-hint`} className="text-xs text-slate-500">
+        <p id={`${selectId}-hint`} className="text-xs text-foreground-muted">
           {hint}
         </p>
       ) : null}

@@ -8,12 +8,12 @@ export default function NotFoundPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-foreground-subtle">
         <Compass className="h-6 w-6" aria-hidden />
       </div>
       <div className="space-y-1">
-        <p className="text-3xl font-semibold text-slate-900">404</p>
-        <p className="text-sm text-slate-500">
+        <p className="text-3xl font-semibold text-foreground">404</p>
+        <p className="text-sm text-foreground-muted">
           The page you&rsquo;re looking for doesn&rsquo;t exist or has moved.
         </p>
       </div>

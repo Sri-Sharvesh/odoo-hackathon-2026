@@ -62,10 +62,10 @@ export default function LoginPage() {
             <Truck className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">
+            <h1 className="text-lg font-semibold text-foreground">
               {APP_CONFIG.appName}
             </h1>
-            <p className="text-sm text-slate-500">{APP_CONFIG.appDescription}</p>
+            <p className="text-sm text-foreground-muted">{APP_CONFIG.appDescription}</p>
           </div>
         </div>
 
@@ -104,7 +104,7 @@ export default function LoginPage() {
         </div>
 
         {APP_CONFIG.useMocks && (
-          <p className="mt-4 text-center text-xs text-slate-400">
+          <p className="mt-4 text-center text-xs text-foreground-subtle">
             Demo mode — any credentials sign you in.
           </p>
         )}

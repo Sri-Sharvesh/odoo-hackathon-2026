@@ -3,8 +3,10 @@ import {
   ChevronDown,
   LogOut,
   Menu,
+  Moon,
   Search,
   Settings,
+  Sun,
   User,
   type LucideIcon,
 } from 'lucide-react'
@@ -13,6 +15,7 @@ import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import type { UserRole } from '@/types/auth'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from '@/hooks/useTheme'
 
 interface TopbarProps {
   onToggleSidebar: () => void
@@ -27,6 +30,7 @@ const roleLabels: Record<UserRole, string> = {
 
 export function Topbar({ onToggleSidebar }: TopbarProps) {
   const { user, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -54,7 +58,7 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
       <button
         type="button"
         onClick={onToggleSidebar}
-        className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
+        className="rounded-md p-2 text-foreground-muted hover:bg-muted"
         aria-label="Toggle navigation"
       >
         <Menu className="h-[18px] w-[18px]" aria-hidden />
@@ -63,21 +67,34 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
       {/* Global search — wiring point for a future search endpoint / command palette. */}
       <div className="relative hidden max-w-md flex-1 sm:block">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-subtle"
           aria-hidden
         />
         <input
           type="search"
           placeholder="Search vehicles, drivers, trips…"
           aria-label="Search"
-          className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
         <button
           type="button"
-          className="relative rounded-md p-2 text-slate-500 hover:bg-slate-100"
+          onClick={toggleTheme}
+          className="rounded-md p-2 text-foreground-muted hover:bg-muted"
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-[18px] w-[18px]" aria-hidden />
+          ) : (
+            <Moon className="h-[18px] w-[18px]" aria-hidden />
+          )}
+        </button>
+
+        <button
+          type="button"
+          className="relative rounded-md p-2 text-foreground-muted hover:bg-muted"
           aria-label="Notifications"
         >
           <Bell className="h-[18px] w-[18px]" aria-hidden />
@@ -91,7 +108,7 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
           <button
             type="button"
             onClick={() => setMenuOpen((value) => !value)}
-            className="flex items-center gap-2 rounded-md py-1 pl-1 pr-2 hover:bg-slate-100"
+            className="flex items-center gap-2 rounded-md py-1 pl-1 pr-2 hover:bg-muted"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
@@ -99,14 +116,14 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
               {initials}
             </span>
             <span className="hidden text-left leading-tight md:block">
-              <span className="block text-sm font-medium text-slate-900">
+              <span className="block text-sm font-medium text-foreground">
                 {user?.name ?? 'User'}
               </span>
-              <span className="block text-xs text-slate-500">
+              <span className="block text-xs text-foreground-muted">
                 {user ? roleLabels[user.role] : ''}
               </span>
             </span>
-            <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" aria-hidden />
+            <ChevronDown className="hidden h-4 w-4 text-foreground-subtle md:block" aria-hidden />
           </button>
 
           {menuOpen && (
@@ -121,7 +138,7 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
               />
               <div
                 role="menu"
-                className="absolute right-0 z-40 mt-1 w-48 rounded-lg border border-border bg-surface py-1 shadow-md"
+                className="absolute right-0 z-40 mt-1 w-48 rounded-lg border border-border bg-surface py-1 shadow-popover"
               >
                 <MenuItem icon={User} label="Profile" onClick={() => go(ROUTES.profile)} />
                 <MenuItem
@@ -154,9 +171,9 @@ function MenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
     >
-      <Icon className="h-4 w-4 text-slate-400" aria-hidden />
+      <Icon className="h-4 w-4 text-foreground-subtle" aria-hidden />
       {label}
     </button>
   )

@@ -42,7 +42,7 @@ export function Dialog({
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 px-4 py-10 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 px-4 py-10 backdrop-blur-[1px] sm:items-center">
       <button
         type="button"
         className="fixed inset-0 cursor-default"
@@ -57,21 +57,21 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-lg border border-border bg-surface shadow-md focus:outline-none',
+          'relative z-10 w-full max-w-lg rounded-lg border border-border bg-surface shadow-popover focus:outline-none',
           className,
         )}
       >
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div>
-            <h2 id={titleId} className="text-sm font-semibold text-slate-900">
+            <h2 id={titleId} className="text-sm font-semibold text-foreground">
               {title}
             </h2>
-            {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+            {description && <p className="mt-0.5 text-sm text-foreground-muted">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-1 text-foreground-subtle hover:bg-muted hover:text-foreground"
             aria-label="Close"
           >
             <X className="h-[18px] w-[18px]" aria-hidden />

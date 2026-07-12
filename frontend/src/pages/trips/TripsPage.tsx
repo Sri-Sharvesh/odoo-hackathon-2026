@@ -66,7 +66,7 @@ export default function TripsPage() {
       id: 'route',
       header: 'Route',
       cell: (row) => (
-        <span className="font-medium text-slate-900">
+        <span className="font-medium text-foreground">
           {row.source} → {row.destination}
         </span>
       ),
@@ -136,7 +136,7 @@ export default function TripsPage() {
             <button
               type="button"
               onClick={() => setPendingDelete(row)}
-              className="rounded-md p-1.5 text-slate-500 hover:bg-danger-surface hover:text-danger"
+              className="rounded-md p-1.5 text-foreground-muted hover:bg-danger-surface hover:text-danger"
               aria-label={`Delete trip ${row.source} to ${row.destination}`}
             >
               <Trash2 className="h-4 w-4" aria-hidden />
@@ -172,7 +172,7 @@ export default function TripsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-xs">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-subtle"
             aria-hidden
           />
           <input
@@ -184,7 +184,7 @@ export default function TripsPage() {
             }}
             placeholder="Search source, destination…"
             aria-label="Search trips"
-            className="h-9 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="h-9 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-foreground placeholder:text-foreground-subtle focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <Select
@@ -254,7 +254,7 @@ export default function TripsPage() {
           </>
         }
       >
-        <p className="text-sm text-slate-600">Are you sure? This action cannot be undone.</p>
+        <p className="text-sm text-foreground-muted">Are you sure? This action cannot be undone.</p>
       </Dialog>
     </div>
   )

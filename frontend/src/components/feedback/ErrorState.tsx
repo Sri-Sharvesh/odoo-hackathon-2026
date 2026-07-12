@@ -25,8 +25,8 @@ export function ErrorState({
         <AlertTriangle className="h-5 w-5" aria-hidden />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-slate-900">{title}</p>
-        <p className="mx-auto max-w-sm text-sm text-slate-500">{description}</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="mx-auto max-w-sm text-sm text-foreground-muted">{description}</p>
       </div>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>

@@ -21,7 +21,7 @@ export default function ReportsPage() {
       id: 'registrationNumber',
       header: 'Vehicle',
       cell: (row) => (
-        <span className="font-medium text-slate-900">
+        <span className="font-medium text-foreground">
           {row.registrationNumber} — {row.model}
         </span>
       ),
@@ -107,7 +107,7 @@ export default function ReportsPage() {
         }
       />
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-foreground-muted">
         ROI shows &ldquo;—&rdquo; until trip revenue is tracked in the system; it is currently
         computed as (Revenue − (Maintenance + Fuel)) ÷ Acquisition Cost.
       </p>

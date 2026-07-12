@@ -7,11 +7,11 @@ const badgeVariants = cva(
   {
     variants: {
       intent: {
-        neutral: 'border-slate-200 bg-slate-50 text-slate-700',
-        info: 'border-blue-200 bg-info-surface text-primary',
-        success: 'border-green-200 bg-success-surface text-success',
-        warning: 'border-amber-200 bg-warning-surface text-amber-700',
-        danger: 'border-red-200 bg-danger-surface text-danger',
+        neutral: 'border-border bg-muted text-foreground-muted',
+        info: 'border-primary/20 bg-info-surface text-primary',
+        success: 'border-success/20 bg-success-surface text-success',
+        warning: 'border-warning/30 bg-warning-surface text-amber-700 dark:text-amber-400',
+        danger: 'border-danger/20 bg-danger-surface text-danger',
       },
     },
     defaultVariants: { intent: 'neutral' },

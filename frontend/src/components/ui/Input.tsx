@@ -31,7 +31,7 @@ export function Input({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={inputId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={inputId} className="text-sm font-medium text-foreground">
           {label}
           {required && (
             <span className="ml-0.5 text-danger" aria-hidden>
@@ -46,7 +46,7 @@ export function Input({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors',
+          'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground placeholder:text-foreground-subtle transition-colors',
           'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
           error && 'border-danger focus:border-danger focus:ring-danger/30',
           className,
@@ -58,7 +58,7 @@ export function Input({
           {error}
         </p>
       ) : hint ? (
-        <p id={`${inputId}-hint`} className="text-xs text-slate-500">
+        <p id={`${inputId}-hint`} className="text-xs text-foreground-muted">
           {hint}
         </p>
       ) : null}

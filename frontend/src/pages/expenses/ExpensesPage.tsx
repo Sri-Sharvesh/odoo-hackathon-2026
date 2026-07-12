@@ -60,7 +60,7 @@ export default function ExpensesPage() {
       id: 'vehicleId',
       header: 'Vehicle',
       cell: (row) => (
-        <span className="font-medium text-slate-900">
+        <span className="font-medium text-foreground">
           {vehicleById.get(row.vehicleId)?.registrationNumber ?? '—'}
         </span>
       ),
@@ -79,7 +79,7 @@ export default function ExpensesPage() {
           <button
             type="button"
             onClick={() => setFormDialog({ open: true, expense: row })}
-            className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="rounded-md p-1.5 text-foreground-muted hover:bg-muted hover:text-foreground"
             aria-label="Edit expense"
           >
             <Pencil className="h-4 w-4" aria-hidden />
@@ -87,7 +87,7 @@ export default function ExpensesPage() {
           <button
             type="button"
             onClick={() => setPendingDelete(row)}
-            className="rounded-md p-1.5 text-slate-500 hover:bg-danger-surface hover:text-danger"
+            className="rounded-md p-1.5 text-foreground-muted hover:bg-danger-surface hover:text-danger"
             aria-label="Delete expense"
           >
             <Trash2 className="h-4 w-4" aria-hidden />
@@ -194,7 +194,7 @@ export default function ExpensesPage() {
           </>
         }
       >
-        <p className="text-sm text-slate-600">Are you sure? This action cannot be undone.</p>
+        <p className="text-sm text-foreground-muted">Are you sure? This action cannot be undone.</p>
       </Dialog>
     </div>
   )

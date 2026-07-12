@@ -25,7 +25,7 @@ export function Sidebar({
       {/* Scrim behind the mobile drawer. */}
       {!isDesktop && mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/40"
+          className="fixed inset-0 z-30 bg-slate-950/50"
           onClick={onCloseMobile}
           aria-hidden
         />
@@ -51,7 +51,7 @@ export function Sidebar({
             <Truck className="h-[18px] w-[18px]" aria-hidden />
           </div>
           {!isRail && (
-            <span className="truncate text-sm font-semibold text-slate-900">
+            <span className="truncate text-sm font-semibold text-foreground">
               {APP_CONFIG.appName}
             </span>
           )}
@@ -59,7 +59,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="ml-auto rounded-md p-1 text-slate-500 hover:bg-slate-100"
+              className="ml-auto rounded-md p-1 text-foreground-muted hover:bg-muted"
               aria-label="Close navigation"
             >
               <X className="h-[18px] w-[18px]" aria-hidden />
@@ -72,7 +72,7 @@ export function Sidebar({
           {NAV_GROUPS.map((group) => (
             <div key={group.title} className="mb-5 last:mb-0">
               {!isRail && (
-                <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-foreground-subtle">
                   {group.title}
                 </p>
               )}
@@ -86,16 +86,26 @@ export function Sidebar({
                       onClick={isDesktop ? undefined : onCloseMobile}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                          'relative flex items-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors',
                           isRail && 'justify-center',
                           isActive
                             ? 'bg-primary/10 text-primary'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                            : 'text-foreground-muted hover:bg-muted hover:text-foreground',
                         )
                       }
                     >
-                      <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
-                      {!isRail && <span className="truncate">{item.label}</span>}
+                      {({ isActive }) => (
+                        <>
+                          {isActive && (
+                            <span
+                              className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                              aria-hidden
+                            />
+                          )}
+                          <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden />
+                          {!isRail && <span className="truncate">{item.label}</span>}
+                        </>
+                      )}
                     </NavLink>
                   </li>
                 ))}

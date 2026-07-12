@@ -18,11 +18,11 @@ export function KpiCard({ icon: Icon, label, value, isLoading }: KpiCardProps) {
           <Icon className="h-[18px] w-[18px]" aria-hidden />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-slate-500">{label}</p>
+          <p className="truncate text-xs font-medium text-foreground-muted">{label}</p>
           {isLoading ? (
             <Skeleton className="mt-1 h-6 w-14" />
           ) : (
-            <p className="text-xl font-semibold text-slate-900">{value}</p>
+            <p className="text-xl font-semibold text-foreground">{value}</p>
           )}
         </div>
       </div>

@@ -1,10 +1,16 @@
 @import 'tailwindcss';
 
 /*
+ * Manual dark mode: `dark:` utilities respond to a `.dark` class on <html>
+ * (set by ThemeProvider), not just OS preference.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Design tokens (Tailwind v4 CSS-first config).
  * Values here generate utilities: e.g. `--color-primary` -> `bg-primary`, `text-primary`.
  * Keep this the single source of truth for brand + semantic colours so the whole
- * app restyles from one place. Neutral greys reuse Tailwind's default `slate` scale.
+ * app restyles from one place, and both themes stay in sync.
  */
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
@@ -28,7 +34,43 @@
   /* Neutral surfaces */
   --color-background: #f8fafc;
   --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
   --color-border: #e5e7eb;
+  --color-muted: #f1f5f9;
+
+  /* Text */
+  --color-foreground: #0f172a;
+  --color-foreground-muted: #64748b;
+  --color-foreground-subtle: #94a3b8;
+
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 1px 0 rgb(15 23 42 / 0.03);
+  --shadow-popover: 0 4px 16px -2px rgb(15 23 42 / 0.12), 0 2px 6px -2px rgb(15 23 42 / 0.08);
+}
+
+/* Dark theme overrides — same tokens, different values. Accent colours stay put so
+ * status meaning (blue/green/amber/red) doesn't shift between themes.
+ * Targets every element under `.dark`, not just <html>: Tailwind registers these
+ * theme colours via `@property` with `inherits: false` (so transitions interpolate
+ * cleanly), which means a value set only on <html> would never cascade down. */
+.dark,
+.dark * {
+  --color-success-surface: color-mix(in srgb, var(--color-success) 16%, transparent);
+  --color-warning-surface: color-mix(in srgb, var(--color-warning) 16%, transparent);
+  --color-danger-surface: color-mix(in srgb, var(--color-danger) 16%, transparent);
+  --color-info-surface: color-mix(in srgb, var(--color-info) 18%, transparent);
+
+  --color-background: #0a0e17;
+  --color-surface: #111827;
+  --color-surface-hover: #161f2e;
+  --color-border: #1f2937;
+  --color-muted: #1a2334;
+
+  --color-foreground: #f1f5f9;
+  --color-foreground-muted: #94a3b8;
+  --color-foreground-subtle: #64748b;
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.24), 0 1px 1px 0 rgb(0 0 0 / 0.16);
+  --shadow-popover: 0 4px 20px -4px rgb(0 0 0 / 0.4), 0 2px 8px -2px rgb(0 0 0 / 0.3);
 }
 
 @layer base {
@@ -37,10 +79,15 @@
     color-scheme: light;
   }
 
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
     background-color: var(--color-background);
+    color: var(--color-foreground);
     font-family: var(--font-sans);
-    @apply text-slate-700 antialiased;
+    @apply antialiased transition-colors duration-150;
   }
 
   /* Consistent, accessible focus ring for keyboard users across all interactive elements. */
@@ -53,6 +100,6 @@
   /* Thin, unobtrusive scrollbars that fit the enterprise aesthetic. */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: var(--color-border) transparent;
   }
 }
