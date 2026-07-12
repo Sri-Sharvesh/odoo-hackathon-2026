@@ -3,13 +3,14 @@
  * makes targeted invalidation trivial (e.g. `queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all() })`).
  */
 import type { ListParams } from '@/types/common'
+import type { DashboardFilters } from '@/types/dashboard'
 
 export const queryKeys = {
   auth: {
     me: () => ['auth', 'me'] as const,
   },
   dashboard: {
-    summary: () => ['dashboard', 'summary'] as const,
+    summary: (filters?: DashboardFilters) => ['dashboard', 'summary', filters ?? {}] as const,
   },
   vehicles: {
     all: () => ['vehicles'] as const,
