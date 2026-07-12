@@ -39,6 +39,9 @@ export const queryKeys = {
     all: () => ['expenses'] as const,
     list: (params?: ListParams) => ['expenses', 'list', params ?? {}] as const,
   },
+  reports: {
+    vehicles: () => ['reports', 'vehicles'] as const,
+  },
   tracking: {
     liveVehicles: () => ['tracking', 'live'] as const,
     route: (vehicleId: string) => ['tracking', 'route', vehicleId] as const,
