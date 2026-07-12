@@ -395,11 +395,12 @@ npm start
 
 ## 🤝 Contributors
 
-Developed during an **8-hour Hackathon**.
+Developed during an * Hackathon**.
 
-- Your Name
-- Team Member 2
-- Team Member 3
+- Nikhil
+- Sarvesh
+- Harrish Kumar
+- Prasannaa
 
 ---
 
